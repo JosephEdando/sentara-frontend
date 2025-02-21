@@ -20,10 +20,12 @@ export default function Home() {
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [loadingVote, setLoadingVote] = useState(false);
   const [userAddress, setUserAddress] = useState("");
+  const [aminAddress, setAdminAddress] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     connectWallet();
+    fetchBlockData();
   }, []);
 
   async function connectWallet() {
@@ -53,92 +55,107 @@ export default function Home() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   }
 
-  async function handleAction(action: "create" | "vote") {
-    let accounts: string[] = [];
-    let network: ethers.Network | undefined;
+  // async function handleAction(action: "create" | "vote") {
+  //   let accounts: string[] = [];
+  //   let network: ethers.Network | undefined;
 
-    try {
-      if (action === "create") {
-        setLoadingCreate(true);
-      } else if (action === "vote") {
-        setLoadingVote(true);
-      }
-      setError("");
+  //   try {
+  //     if (action === "create") {
+  //       setLoadingCreate(true);
+  //     } else if (action === "vote") {
+  //       setLoadingVote(true);
+  //     }
+  //     setError("");
 
-      if (!window.ethereum) {
-        setError("Please install MetaMask.");
-        return;
-      }
+  //     if (!window.ethereum) {
+  //       setError("Please install MetaMask.");
+  //       return;
+  //     }
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
+  //     const provider = new ethers.BrowserProvider(window.ethereum);
 
-      // 1. Check network
-      network = await provider.getNetwork();
-      console.log("Connected to network:", network);
+  //     // 1. Check network
+  //     network = await provider.getNetwork();
+  //     console.log("Connected to network:", network);
 
-      // 2. Verify contract exists
-      const code = await provider.getCode(CONTRACT_ADDRESS);
-      console.log("Contract code at address:", code);
-      if (code === "0x") {
-        setError("Contract not deployed");
-        return;
-      }
+  //     // 2. Verify contract exists
+  //     const code = await provider.getCode(CONTRACT_ADDRESS);
+  //     console.log("Contract code at address:", code);
+  //     if (code === "0x") {
+  //       setError("Contract not deployed");
+  //       return;
+  //     }
 
-      accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      });
-      const signer = await provider.getSigner();
+  //     accounts = await window.ethereum.request({
+  //       method: "eth_requestAccounts",
+  //     });
+  //     const signer = await provider.getSigner();
 
-      // 3. Use proper ABI handling
-      const contract = new ethers.Contract(
-        CONTRACT_ADDRESS,
-        ContractABI,
-        signer
-      );
+  //     // 3. Use proper ABI handling
+  //     const contract = new ethers.Contract(
+  //       CONTRACT_ADDRESS,
+  //       ContractABI,
+  //       signer
+  //     );
 
-      // 4. Verify admin function exists
-      if (!contract.admin) {
-        throw new Error("Contract ABI missing admin function");
-      }
+  //     // 4. Verify admin function exists
+  //     if (!contract.admin) {
+  //       throw new Error("Contract ABI missing admin function");
+  //     }
 
-      if (action === "create") {
-        const adminAddress = await contract.admin();
-        console.log("Admin address from contract:", adminAddress);
+  //     if (action === "create") {
+  //       const adminAddress = await contract.admin();
+  //       console.log("Admin address from contract:", adminAddress);
 
-        if (adminAddress === '0x0000000000000000000000000000000000000000') {
-          // First-time admin setup
-          const tx = await contract.claimAdmin();
-          await tx.wait();
-          console.log("New admin set:", accounts[0]);
-        } else {
-          // Verify existing admin
-          if (accounts[0].toLowerCase() !== adminAddress.toLowerCase()) {
-            setError("Admin privileges required");
-            return;
-          }
-        }
-        router.push("/admin");
-      } else if (action === "vote") {
-        router.push("/vote");
-      }
-    } catch (err: any) {
-      const errorDetails = {
-        error: err.message || "Unknown error",
-        userAddress: (accounts?.[0] || "Not available"),
-        contractAddress: CONTRACT_ADDRESS,
-        network: (network?.name || "Network not detected")
-      };  
-      console.error("Error occurred:", error);
-      setError("An error occurred while processing your request. Please try again.");
-    } finally {
-      if (action === "create") {
-        setLoadingCreate(false);
-      } else if (action === "vote") {
-        setLoadingVote(false);
-      }
+  //       if (adminAddress === '0x0000000000000000000000000000000000000000') {
+  //         // First-time admin setup
+  //         const tx = await contract.claimAdmin();
+  //         await tx.wait();
+  //         console.log("New admin set:", accounts[0]);
+  //       } else {
+  //         // Verify existing admin
+  //         if (accounts[0].toLowerCase() !== adminAddress.toLowerCase()) {
+  //           setError("Admin privileges required");
+  //           return;
+  //         }
+  //       }
+  //       router.push("/admin");
+  //     } else if (action === "vote") {
+  //       router.push("/vote");
+  //     }
+  //   } catch (err: any) {
+  //     const errorDetails = {
+  //       error: err.message || "Unknown error",
+  //       userAddress: (accounts?.[0] || "Not available"),
+  //       contractAddress: CONTRACT_ADDRESS,
+  //       network: (network?.name || "Network not detected")
+  //     };
+  //     console.error("Error occurred:", error);
+  //     setError("An error occurred while processing your request. Please try again.");
+  //   } finally {
+  //     if (action === "create") {
+  //       setLoadingCreate(false);
+  //     } else if (action === "vote") {
+  //       setLoadingVote(false);
+  //     }
+  //   }
+  // }
+
+  const fetchBlockData = async () => {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+
+    const contractIns = new ethers.Contract(
+      CONTRACT_ADDRESS,
+      ContractABI,
+      provider
+    );
+
+    const isAdmin = await contractIns.admin();
+
+    if (userAddress.toString() === isAdmin.toString()) {
+      setAdminAddress(true);
     }
-  }
-
+  };
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       {/* Navbar */}
@@ -148,29 +165,41 @@ export default function Home() {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link href="/about" className="text-gray-600 hover:text-blue-600 transition">About</Link>
-            <Link href="/contact" className="text-gray-600 hover:text-blue-600 transition">Contact</Link>
-
-            <button
-              onClick={() => handleAction("create")}
+            <Link
+              href="/about"
               className="text-gray-600 hover:text-blue-600 transition"
-              disabled={loadingCreate || loadingVote}
             >
-              {loadingCreate ? "Initializing..." : "Create Contest"}
-            </button>
-
-            <button
-              onClick={() => handleAction("vote")}
+              About
+            </Link>
+            <Link
+              href="/contact"
               className="text-gray-600 hover:text-blue-600 transition"
-              disabled={loadingCreate || loadingVote}
             >
-              {loadingVote ? "Connecting..." : "Vote"}
-            </button>
+              Contact
+            </Link>
+
+            {aminAddress && (
+              <Link
+                href="/admin"
+                className="text-gray-600 hover:text-blue-600 transition"
+              >
+                Create Contest
+              </Link>
+            )}
+
+            <Link
+              href="/vote"
+              className="text-gray-600 hover:text-blue-600 transition"
+            >
+              Vote
+            </Link>
 
             <div className="flex items-center px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow">
               {userAddress ? (
                 <>
-                  <span className="mr-2"><FaEthereum /></span>
+                  <span className="mr-2">
+                    <FaEthereum />
+                  </span>
                   {truncateAddress(userAddress)}
                 </>
               ) : (
@@ -183,7 +212,10 @@ export default function Home() {
 
           {/* Mobile Menu Button */}
           <div className="md:hidden">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-2xl text-gray-600">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="text-2xl text-gray-600"
+            >
               {isMenuOpen ? <AiOutlineClose /> : <AiOutlineMenu />}
             </button>
           </div>
@@ -192,17 +224,26 @@ export default function Home() {
         {/* Mobile Menu Dropdown */}
         {isMenuOpen && (
           <div className="md:hidden bg-white p-4 space-y-4">
-            <Link href="/about" className="block text-gray-600 hover:text-blue-600">About</Link>
-            <Link href="/contact" className="block text-gray-600 hover:text-blue-600">Contact</Link>
+            <Link
+              href="/about"
+              className="block text-gray-600 hover:text-blue-600"
+            >
+              About
+            </Link>
+            <Link
+              href="/contact"
+              className="block text-gray-600 hover:text-blue-600"
+            >
+              Contact
+            </Link>
+
             <button
-              onClick={() => handleAction("create")}
               className="block w-full text-left text-gray-600 hover:text-blue-600"
               disabled={loadingCreate || loadingVote}
             >
               {loadingCreate ? "Processing..." : "Create Contest"}
             </button>
             <button
-              onClick={() => handleAction("vote")}
               className="block w-full text-left text-gray-600 hover:text-blue-600"
               disabled={loadingCreate || loadingVote}
             >
@@ -224,7 +265,7 @@ export default function Home() {
           <p className="text-xl text-gray-600 mb-8">
             Create secure voting contests or participate in existing ones
           </p>
-          
+
           {error && (
             <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
               {error}
@@ -232,20 +273,25 @@ export default function Home() {
           )}
 
           <div className="flex justify-center gap-4">
-            <button
-              onClick={() => handleAction("create")}
-              className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              disabled={loadingCreate || loadingVote}
-            >
-              {loadingCreate ? "Initializing..." : "Start New Contest"}
-            </button>
-            <button
-              onClick={() => handleAction("vote")}
-              className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-              disabled={loadingCreate || loadingVote}
-            >
-              {loadingVote ? "Connecting..." : "Participate in Vote"}
-            </button>
+            {aminAddress && (
+              <Link href={"/admin"}>
+                <button
+                  className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  disabled={loadingCreate || loadingVote}
+                >
+                  {loadingCreate ? "Initializing..." : "Start New Contest"}
+                </button>
+              </Link>
+            )}
+
+            <Link href={"/vote"}>
+              <button
+                className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                disabled={loadingCreate || loadingVote}
+              >
+                {loadingVote ? "Connecting..." : "Participate in Vote"}
+              </button>
+            </Link>
           </div>
         </div>
       </main>

@@ -2,14 +2,26 @@
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import { useRouter } from "next/navigation";
-import ContractABI from "../../utils/TitanSentara.json";
+import ContractABI from "../utils/TitanSentara.json";
 
 const CONTRACT_ADDRESS = "0xC36c049Ec23c30D2CBFADAf15A33F8481A754d24";
 
 export default function vote() {
   const router = useRouter();
-  const [positions, setPositions] = useState([]);
-  const [candidates, setCandidates] = useState([]);
+  interface Position {
+    id: number;
+    name: string;
+  }
+
+  interface Candidate {
+    id: number;
+    name: string;
+    positionId: number;
+    voteCount: number;
+  }
+
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [selectedVotes, setSelectedVotes] = useState({}); // { [positionId]: { candidateId, quantity } }
   const [contract, setContract] = useState<ethers.Contract | null>(null);
   const [voteCost, setVoteCost] = useState("");

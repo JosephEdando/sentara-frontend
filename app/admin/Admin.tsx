@@ -2,10 +2,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ethers } from "ethers";
-import ContractABI from "../../utils/TitanSentara.json";
+import ContractABI from "../utils/TitanSentara.json";
 
 const CONTRACT_ADDRESS = "0xC36c049Ec23c30D2CBFADAf15A33F8481A754d24";
-const { AddressZero } = ethers.constants;
+// const { AddressZero } = ethers.constants;
 
 interface Position {
   id: number;
@@ -105,12 +105,7 @@ export default function AdminDashboard() {
       const adminAddress = await contract.admin();
       console.log("Admin address:", adminAddress);
 
-      if (adminAddress === AddressZero) {
-        // Claim admin role if not set
-        const tx = await contract.claimAdmin();
-        await tx.wait();
-        console.log("Admin role claimed by:", accounts[0]);
-      } else if (accounts[0].toLowerCase() !== adminAddress.toLowerCase()) {
+      } catch(error) {
         setError("Admin privileges required.");
         router.push("/"); // Redirect to home page or any other page
         return;
