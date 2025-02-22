@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import { useRouter } from "next/navigation";
-import ContractABI from "../../utils/TitanSentara.json";
+import ContractABI from "../utils/TitanSentara.json";
 
 const CONTRACT_ADDRESS = "0xC36c049Ec23c30D2CBFADAf15A33F8481A754d24";
 
@@ -10,7 +10,7 @@ export default function vote() {
   const router = useRouter();
   const [positions, setPositions] = useState([]);
   const [candidates, setCandidates] = useState([]);
-  const [selectedVotes, setSelectedVotes] = useState({}); // { [positionId]: { candidateId, quantity } }
+  const [selectedVotes, setSelectedVotes] = useState<{ [key: number]: { candidateId: number; quantity: number } }>({}); // { [positionId]: { candidateId, quantity } }
   const [contract, setContract] = useState<ethers.Contract | null>(null);
   const [voteCost, setVoteCost] = useState("");
   const [loading, setLoading] = useState(true);
@@ -45,7 +45,7 @@ export default function vote() {
     }
   }
 
-  async function fetchData(contractInstance) {
+  async function fetchData(contractInstance: ethers.Contract) {
     try {
       // Fetch positions and candidates
       const positionsData = await contractInstance.getPositions();
@@ -93,7 +93,7 @@ export default function vote() {
     getCandidates(): Promise<any>;
     voteCost(): Promise<any>;
     castVotes(positionId: number, candidateId: number, quantity: number, options: { value: ethers.BigNumber }): Promise<ethers.ContractTransaction>;
-    [key: string]: ethers.ContractFunction | any;
+    [key: string]: any;
   }
 
   async function castVote(positionId: number) {
